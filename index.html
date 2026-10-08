@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="et">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pane e-kiri kokku - Nutitahvli versioon</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #e0f2fe 0%, #f0fdf4 50%, #fef3c7 100%);
+            touch-action: manipulation;
+        }
+        .font-fun {
+            font-family: 'Fredoka', sans-serif;
+        }
+        /* Custom card & drag styles optimized for smartboards */
+        .card {
+            transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+            touch-action: none;
+            user-select: none;
+        }
+        .card.dragging {
+            opacity: 0.7;
+            transform: scale(1.02);
+            box-shadow: 0 20px 30px -10px rgba(0, 0, 0, 0.25);
+            z-index: 50;
+        }
+        /* Pulse animation for active success */
+        @keyframes celebrate {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.03); }
+        }
+        .celebrate-anim {
+            animation: celebrate 0.5s ease-in-out infinite;
+        }
+    </style>
+</head>
+<body class="min-h-screen text-slate-800 p-3 md:p-6 flex flex-col items-center justify-between">
+
+    <header class="text-center mb-3 max-w-4xl w-full">
+        <div class="inline-block bg-white/80 backdrop-blur-md px-6 py-2 rounded-2xl shadow-sm border border-blue-100 mb-2">
+            <span class="text-blue-600 font-fun font-bold tracking-wide uppercase text-xs md:text-sm">Eesti keele digiõpe 🖥️</span>
+        </div>
+        <h1 class="font-fun text-3xl md:text-5xl text-blue-900 mb-2 flex items-center justify-center gap-3 drop-shadow-sm">
+            <span>✉️</span> Pane e-kiri õigesse järjekorda! <span>🧩</span>
+        </h1>
+        <p class="text-slate-600 text-sm md:text-lg max-w-2xl mx-auto">
+            Lohista kirja osad õigele kohale tahvlil. Ehita valmis korrektne e-kiri!
+        </p>
+    </header>
+
+    <div class="flex flex-wrap justify-center gap-3 md:gap-4 mb-4 w-full max-w-4xl">
+        <button onclick="switchGame('A')" id="btn-A" class="px-5 py-3 rounded-2xl font-fun text-base md:text-lg font-bold shadow-md transition transform active:scale-95 bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-blue-200 border-2 border-blue-400 flex items-center gap-2">
+            <span>🎒</span> Kodune töö õpetajale
+        </button>
+        <button onclick="switchGame('B')" id="btn-B" class="px-5 py-3 rounded-2xl font-fun text-base md:text-lg font-bold shadow-md transition transform active:scale-95 bg-white text-slate-700 hover:bg-slate-50 border-2 border-slate-200 flex items-center gap-2">
+            <span>🤒</span> Martin on haige
+        </button>
+        <button onclick="switchGame('C')" id="btn-C" class="px-5 py-3 rounded-2xl font-fun text-base md:text-lg font-bold shadow-md transition transform active:scale-95 bg-white text-slate-700 hover:bg-slate-50 border-2 border-slate-200 flex items-center gap-2">
+            <span>🎂</span> Sünnipäeva kutse
+        </button>
+    </div>
+
+    <main class="w-full max-w-3xl bg-white/90 backdrop-blur-xl rounded-3xl p-4 md:p-6 shadow-2xl border-4 border-white mb-4 relative">
+        <div class="flex items-center justify-between mb-4 border-b-2 border-slate-100 pb-3">
+            <h2 id="game-title" class="font-fun text-xl md:text-2xl text-slate-800 flex items-center gap-2">Kodune töö õpetajale</h2>
+            <div class="flex items-center gap-2">
+                <span class="text-xs md:text-sm font-bold px-3 py-1.5 bg-blue-100 text-blue-800 rounded-xl" id="step-counter">6 osa</span>
+            </div>
+        </div>
+
+        <!-- Cards container optimized for touch targets -->
+        <div id="cards-container" class="space-y-2.5 md:space-y-3 min-h-[340px]">
+            <!-- Dynamically populated cards will go here -->
+        </div>
+    </main>
+
+    <div class="w-full max-w-3xl flex flex-col items-center gap-3 mb-2">
+        <div class="flex flex-wrap justify-center gap-3 w-full">
+            <button onclick="checkAnswer()" class="flex-1 max-w-xs px-6 py-3.5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-fun text-lg font-bold rounded-2xl shadow-lg shadow-emerald-200 transition transform active:scale-95 flex items-center justify-center gap-2 border-2 border-emerald-300 cursor-pointer">
+                <span>✅</span> Kontrolli vastust
+            </button>
+            <button onclick="shuffleCurrentGame()" class="px-5 py-3.5 bg-slate-200 hover:bg-slate-300 text-slate-700 font-fun text-lg font-bold rounded-2xl transition transform active:scale-95 flex items-center gap-2 border-2 border-slate-300 cursor-pointer">
+                <span>🔀</span> Sega uuesti
+            </button>
+        </div>
+
+        <!-- Feedback message container -->
+        <div id="message" class="w-full text-center text-lg md:text-xl font-fun font-bold min-h-[45px] transition-all flex items-center justify-center"></div>
+    </div>
+
+    <script>
+        const games = {
+            A: {
+                title: "🎒 Kodune töö õpetajale",
+                correct: ["to", "subject", "greeting", "body", "closing", "signature"],
+                items: {
+                    to: { icon: "👤", color: "bg-amber-100 border-amber-300 text-amber-900", label: "KELLELE?", text: "opetaja@kool.ee", desc: "Saaja e-posti aadress" },
+                    subject: { icon: "🏷️", color: "bg-sky-100 border-sky-300 text-sky-900", label: "TEEMA", text: "Kodune töö", desc: "Lühike kokkuvõte kirjast" },
+                    greeting: { icon: "👋", color: "bg-emerald-100 border-emerald-300 text-emerald-900", label: "TERVITUS", text: "Tere, õpetaja!", desc: "Viisakas alustus" },
+                    body: { icon: "💬", color: "bg-indigo-100 border-indigo-300 text-indigo-900", label: "JUTT", text: "Saadan Teile oma eesti keele ülesande.", desc: "Kirja sisu ja selgitus" },
+                    closing: { icon: "🤝", color: "bg-purple-100 border-purple-300 text-purple-900", label: "LÕPETUS", text: "Ilusat päeva soovides", desc: "Soovitus lõppu" },
+                    signature: { icon: "✍️", color: "bg-rose-100 border-rose-300 text-rose-900", label: "NIMI", text: "Aleksei 4. klassist", desc: "Kes kirjutab" }
+                }
+            },
+            B: {
+                title: "🤒 Martin on haige",
+                correct: ["to", "subject", "greeting", "body", "closing", "signature"],
+                items: {
+                    to: { icon: "👤", color: "bg-amber-100 border-amber-300 text-amber-900", label: "KELLELE?", text: "opetaja.tamm@kool.ee", desc: "Klassijuhataja aadress" },
+                    subject: { icon: "🏷️", color: "bg-sky-100 border-sky-300 text-sky-900", label: "TEEMA", text: "Martin on haige", desc: "Selge teemarida" },
+                    greeting: { icon: "👋", color: "bg-emerald-100 border-emerald-300 text-emerald-900", label: "TERVITUS", text: "Tere, õpetaja Tamm!", desc: "Isiklik tervitus" },
+                    body: { icon: "💬", color: "bg-indigo-100 border-indigo-300 text-indigo-900", label: "JUTT", text: "Mina täna kooli ei tule. Mul on palavik.", desc: "Puudumise põhjus" },
+                    closing: { icon: "🤝", color: "bg-purple-100 border-purple-300 text-purple-900", label: "LÕPETUS", text: "Tervitades", desc: "Sõbralik lõpp" },
+                    signature: { icon: "✍️", color: "bg-rose-100 border-rose-300 text-rose-900", label: "NIMI", text: "Martin 4.B klassist", desc: "Õpilase nimi ja klass" }
+                }
+            },
+            C: {
+                title: "🎂 Sünnipäeva kutse sõbrale",
+                correct: ["to", "subject", "greeting", "body", "closing", "signature"],
+                items: {
+                    to: { icon: "👤", color: "bg-amber-100 border-amber-300 text-amber-900", label: "KELLELE?", text: "katrin.sober@kool.ee", desc: "Sõbra aadress" },
+                    subject: { icon: "🏷️", color: "bg-sky-100 border-sky-300 text-sky-900", label: "TEEMA", text: "Minu sünnipäev!", desc: "Peo teema" },
+                    greeting: { icon: "👋", color: "bg-emerald-100 border-emerald-300 text-emerald-900", label: "TERVITUS", text: "Tere, Katrin!", desc: "Sõbralik tervitus" },
+                    body: { icon: "💬", color: "bg-indigo-100 border-indigo-300 text-indigo-900", label: "JUTT", text: "Tule laupäeval kell 14.00 minu sünnipäevale.", desc: "Aeg ja kutse" },
+                    closing: { icon: "🤝", color: "bg-purple-100 border-purple-300 text-purple-900", label: "LÕPETUS", text: "Ootan sind väga!", desc: "Innustav lõpp" },
+                    signature: { icon: "✍️", color: "bg-rose-100 border-rose-300 text-rose-900", label: "NIMI", text: "Sinu sõber Sofia", desc: "Saatja nimi" }
+                }
+            }
+        };
+
+        let currentGame = "A";
+
+        function shuffle(arr) {
+            for (let i = arr.length - 1; i > 0; i--) {
+                let j = Math.floor(Math.random() * (i + 1));
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+            }
+        }
+
+        function switchGame(id) {
+            currentGame = id;
+            
+            // Update menu button states
+            ['A', 'B', 'C'].forEach(key => {
+                const btn = document.getElementById(`btn-${key}`);
+                if (key === id) {
+                    btn.className = "px-5 py-3 rounded-2xl font-fun text-base md:text-lg font-bold shadow-md transition transform active:scale-95 bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-blue-200 border-2 border-blue-400 flex items-center gap-2";
+                } else {
+                    btn.className = "px-5 py-3 rounded-2xl font-fun text-base md:text-lg font-bold shadow-md transition transform active:scale-95 bg-white text-slate-700 hover:bg-slate-50 border-2 border-slate-200 flex items-center gap-2";
+                }
+            });
+
+            startGame(id);
+        }
+
+        function startGame(id) {
+            const game = games[id];
+            document.getElementById("game-title").innerText = game.title;
+            document.getElementById("message").innerHTML = "";
+
+            let order = Object.keys(game.items);
+            shuffle(order);
+
+            const container = document.getElementById("cards-container");
+            container.innerHTML = "";
+
+            order.forEach((key, index) => {
+                const item = game.items[key];
+                const card = document.createElement("div");
+                card.className = "card bg-white border-2 border-slate-200 rounded-2xl p-3.5 md:p-4 flex items-center justify-between shadow-sm cursor-grab active:cursor-grabbing hover:border-blue-400 hover:shadow-md";
+                card.draggable = true;
+                card.dataset.id = key;
+
+                card.innerHTML = `
+                    <div class="flex items-center gap-3.5 w-full">
+                        <div class="w-12 h-12 md:w-14 md:h-14 rounded-2xl ${item.color} border-2 flex items-center justify-center text-2xl md:text-3xl shadow-inner shrink-0">
+                            ${item.icon}
+                        </div>
+                        <div class="flex-grow">
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <span class="text-xs font-fun font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-lg ${item.color}">${item.label}</span>
+                                <span class="text-xs text-slate-400 font-medium hidden sm:inline">${item.desc}</span>
+                            </div>
+                            <p class="text-slate-900 font-semibold text-base md:text-lg mt-0.5">${item.text}</p>
+                        </div>
+                        <div class="text-slate-300 hover:text-slate-500 p-2 flex flex-col gap-1 shrink-0" title="Lohista tahvlil">
+                            <div class="w-5 h-1 bg-slate-200 rounded-full"></div>
+                            <div class="w-5 h-1 bg-slate-200 rounded-full"></div>
+                            <div class="w-5 h-1 bg-slate-200 rounded-full"></div>
+                        </div>
+                    </div>
+                `;
+
+                container.appendChild(card);
+            });
+
+            activateDragAndDrop();
+        }
+
+        function shuffleCurrentGame() {
+            startGame(currentGame);
+        }
+
+        function activateDragAndDrop() {
+            let draggedCard = null;
+            const container = document.getElementById("cards-container");
+            const cards = container.querySelectorAll(".card");
+
+            cards.forEach(card => {
+                card.addEventListener("dragstart", () => {
+                    draggedCard = card;
+                    card.classList.add("dragging");
+                });
+
+                card.addEventListener("dragend", () => {
+                    card.classList.remove("dragging");
+                    draggedCard = null;
+                });
+
+                card.addEventListener("dragover", e => {
+                    e.preventDefault();
+                    const afterElement = getDragAfterElement(container, e.clientY);
+                    if (draggedCard) {
+                        if (afterElement == null) {
+                            container.appendChild(draggedCard);
+                        } else {
+                            container.insertBefore(draggedCard, afterElement);
+                        }
+                    }
+                });
+            });
+
+            // Advanced Touch support for Smartboards and touch screens
+            cards.forEach(card => {
+                card.addEventListener("touchstart", (e) => {
+                    draggedCard = card;
+                    card.classList.add("dragging");
+                }, {passive: true});
+
+                card.addEventListener("touchmove", (e) => {
+                    if (!draggedCard) return;
+                    e.preventDefault();
+                    const touchY = e.touches[0].clientY;
+                    const afterElement = getDragAfterElement(container, touchY);
+                    
+                    if (afterElement == null) {
+                        container.appendChild(draggedCard);
+                    } else {
+                        container.insertBefore(draggedCard, afterElement);
+                    }
+                }, {passive: false});
+
+                card.addEventListener("touchend", () => {
+                    if (draggedCard) {
+                        draggedCard.classList.remove("dragging");
+                        draggedCard = null;
+                    }
+                });
+            });
+        }
+
+        function getDragAfterElement(container, y) {
+            const draggableElements = [...container.querySelectorAll(".card:not(.dragging)")];
+
+            return draggableElements.reduce((closest, child) => {
+                const box = child.getBoundingClientRect();
+                const offset = y - box.top - box.height / 2;
+                if (offset < 0 && offset > closest.offset) {
+                    return { offset: offset, element: child };
+                } else {
+                    return closest;
+                }
+            }, { offset: Number.NEGATIVE_INFINITY }).element;
+        }
+
+        function checkAnswer() {
+            const current = [...document.querySelectorAll(".card")].map(card => card.dataset.id);
+            const correct = games[currentGame].correct;
+
+            const isCorrect = JSON.stringify(current) === JSON.stringify(correct);
+            const msg = document.getElementById("message");
+
+            if (isCorrect) {
+                msg.innerHTML = "🎉 Suurepärane! E-kiri on ideaalses järjekorras!";
+                msg.className = "w-full text-center text-lg md:text-xl font-fun font-bold text-emerald-700 bg-emerald-100 py-3.5 px-4 rounded-2xl border-2 border-emerald-300 shadow-sm celebrate-anim";
+            } else {
+                msg.innerHTML = "❌ Veel mitte päris õige. Tõsta kaardid ümber ja proovi uuesti!";
+                msg.className = "w-full text-center text-base md:text-lg font-fun font-bold text-rose-700 bg-rose-100 py-3.5 px-4 rounded-2xl border-2 border-rose-300 shadow-sm";
+            }
+        }
+
+        // Initialize first game on load
+        startGame("A");
+    </script>
+</body>
+</html>
